@@ -603,7 +603,7 @@ var $$GenericClass$1 = function(T1) {
 	var $type = function() {
 	};
 	{Script}.registerGenericClassInstance($type, {GenericClass}, [T1], function() {
-		return {Object};
+		return null;
 	}, function() {
 		return [];
 	});
@@ -676,7 +676,7 @@ var $GenericClass$1 = function(T1) {
 	var $type = function() {
 	};
 	{Script}.registerGenericClassInstance($type, {GenericClass}, [T1], function() {
-		return {Object};
+		return null;
 	}, function() {
 		return [];
 	});
@@ -912,7 +912,7 @@ var $MyClass$2 = function(T1, T2) {
 	$type.f = function() {
 	};
 	{Script}.registerGenericClassInstance($type, {MyClass}, [T1, T2], function() {
-		return {Object};
+		return null;
 	}, function() {
 		return [];
 	});
@@ -920,6 +920,133 @@ var $MyClass$2 = function(T1, T2) {
 };
 {Script}.registerGenericClass(global, 'MyClass$2', $MyClass$2, 2);
 ", new[] { "MyClass" });
+		}
+
+		[Test]
+		public void InheritanceFromImportedSerializableClassIsNotRecordedInInheritanceList() {
+			AssertCorrect(
+@"[System.Runtime.CompilerServices.Imported, System.Serializable] public class B {}
+public class D : B {}
+",
+@"////////////////////////////////////////////////////////////////////////////////
+// D
+var $D = function() {
+};
+{Script}.registerClass(global, 'D', $D);
+", new[] { "D" });
+		}
+
+		[Test]
+		public void InheritanceFromImportedSerializableInterfaceIsNotRecordedInInheritanceList() {
+			AssertCorrect(
+@"using System;
+using System.Runtime.CompilerServices;
+[Imported, Serializable] public interface I1 {}
+[Serializable] public interface I2 {}
+[Serializable] public interface I3 : I1, I2 {}
+public class C : I1, I2 {}
+",
+@"////////////////////////////////////////////////////////////////////////////////
+// C
+var $C = function() {
+};
+////////////////////////////////////////////////////////////////////////////////
+// I3
+var $I3 = function() {
+};
+{Script}.registerClass(global, 'C', $C, null, [{I2}]);
+{Script}.registerInterface(global, 'I3', $I3, [{I2}]);
+", new[] { "C", "I3" });
+		}
+
+		[Test]
+		public void TypeCheckCodeForSerializableTypesWorks() {
+			AssertCorrect(
+@"using System;
+using System.Runtime.CompilerServices;
+[Serializable] public class C {}
+[Serializable(TypeCheckCode = ""{this}.X"")] public class D : B {}
+",
+@"////////////////////////////////////////////////////////////////////////////////
+// D
+var $D = function() {
+};
+$D.createInstance = function() {
+	return {D}.$ctor();
+};
+$D.$ctor = function() {
+	var $this = {};
+	return $this;
+};
+$D.isInstanceOfType = function(obj) {
+	return obj.X;
+};
+{Script}.registerClass(global, 'D', $D);
+", new[] { "D" });
+		}
+
+		[Test]
+		public void TypeCheckCodeForGenericSerializableTypesWorks() {
+			AssertCorrect(
+@"using System;
+using System.Runtime.CompilerServices;
+[Serializable] public class C {}
+[Serializable(TypeCheckCode = ""{this}.X == {T}"")] public class D<T> : B {}
+",
+@"////////////////////////////////////////////////////////////////////////////////
+// D
+var $D$1 = function(T) {
+	var $type = function() {
+	};
+	$type.createInstance = function() {
+		return $type.$ctor();
+	};
+	$type.$ctor = function() {
+		var $this = {};
+		return $this;
+	};
+	$type.isInstanceOfType = function(obj) {
+		return obj.X == T;
+	};
+	{Script}.registerGenericClassInstance($type, {D}, [T], function() {
+		return null;
+	}, function() {
+		return [];
+	});
+	return $type;
+};
+{Script}.registerGenericClass(global, 'D$1', $D$1, 1);
+", new[] { "D" });
+		}
+
+		[Test]
+		public void UsingUnavailableTypeParameterInTypeCheckCodeIsAnError() {
+			var er = new MockErrorReporter();
+			Process(@"
+[System.Serializable(TypeCheckCode = ""{this} == {T}""), System.Runtime.CompilerServices.IncludeGenericArguments(false)] public class C1<T> {}
+", errorReporter: er);
+			Assert.That(er.AllMessages.Count, Is.EqualTo(1));
+			Assert.That(er.AllMessages.Any(m => m.Severity == MessageSeverity.Error && m.Code == 7536 && m.FormattedMessage.Contains("IncludeGenericArguments") && m.FormattedMessage.Contains("type C1")));
+		}
+
+		[Test]
+		public void ReferencingNonExistentTypeInTypeCheckCodeIsAnError() {
+			var er = new MockErrorReporter();
+			Process(@"
+[System.Serializable(TypeCheckCode = ""{this} == {$Some.Nonexistent.Type}""), System.Runtime.CompilerServices.IncludeGenericArguments(false)] public class C1<T> {}
+", errorReporter: er);
+			Assert.That(er.AllMessages.Count, Is.EqualTo(1));
+			Assert.That(er.AllMessages.Any(m => m.Severity == MessageSeverity.Error && m.Code == 7157 && m.FormattedMessage.Contains("C1") && m.FormattedMessage.Contains("Some.Nonexistent.Type")));
+		}
+
+		[Test]
+		public void SyntaxErrorInTypeCheckCodeIsAnError() {
+			var er = new MockErrorReporter();
+			Process(@"
+[System.Serializable(TypeCheckCode = ""{{this} == 1""), System.Runtime.CompilerServices.IncludeGenericArguments(false)] public class C1<T> {}
+", errorReporter: er);
+			Assert.That(er.AllMessages.Count, Is.EqualTo(1));
+			Assert.That(er.AllMessages.Any(m => m.Severity == MessageSeverity.Error && m.Code == 7157 && m.FormattedMessage.Contains("C1") && m.FormattedMessage.Contains("syntax error")));
 		}
 	}
 }

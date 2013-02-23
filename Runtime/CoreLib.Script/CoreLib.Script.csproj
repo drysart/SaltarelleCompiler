@@ -23,7 +23,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Content Include="Comparer.js" />
-    <Content Include="Attribute.js" />
     <Content Include="IFormattable.js" />
     <Content Include="IComparer.js" />
     <Content Include="Function.js" />
@@ -50,6 +49,7 @@
     <Content Include="Int32.js" />
     <Content Include="IteratorBlockEnumerator.js" />
     <Content Include="mscorlib.js" />
+    <Content Include="Math.js" />
     <Content Include="Array.js" />
     <Content Include="Number.js" />
     <Content Include="Object.js" />
