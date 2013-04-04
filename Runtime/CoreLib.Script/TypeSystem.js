@@ -261,13 +261,18 @@ ss.isInterface = function#? DEBUG Type$isInterface##(type) {
 };
 
 ss.safeCast = function#? DEBUG ss$safeCast##(instance, type) {
-	return ss.isInstanceOfType(instance, type) ? instance : null;
+	if (type === true)
+		return instance;
+	else if (type === false)
+		return null;
+	else
+		return ss.isInstanceOfType(instance, type) ? instance : null;
 };
 
 ss.cast = function#? DEBUG ss$cast##(instance, type) {
-	if (instance === null)
+	if (instance === null || type === false)
 		return null;
-	else if (typeof(instance) === "undefined" || ss.isInstanceOfType(instance, type)) {
+	else if (typeof(instance) === "undefined" || type === true || ss.isInstanceOfType(instance, type)) {
 		return instance;
 	}
 	throw 'Cannot cast object to type ' + ss.getTypeFullName(type);
@@ -422,7 +427,7 @@ ss.midel = function#? DEBUG ss$midel##(mi, target, typeArguments) {
 		method = function(v) { (mi.isStatic ? mi.typeDef : this)[mi.fset] = v; };
 	}
 	else {
-		var method = mi.isStatic || mi.sm ? mi.typeDef[mi.js] : target[mi.js];
+		method = mi.def || (mi.isStatic || mi.sm ? mi.typeDef[mi.sname] : target[mi.sname]);
 
 		if (mi.tpcount) {
 			if (!typeArguments || typeArguments.length !== mi.tpcount)
@@ -433,20 +438,29 @@ ss.midel = function#? DEBUG ss$midel##(mi, target, typeArguments) {
 			if (typeArguments && typeArguments.length)
 				throw 'Cannot specify type arguments for non-generic method';
 		}
+		if (mi.exp) {
+			var _m1 = method;
+			method = function () { return _m1.apply(this, Array.prototype.slice.call(arguments, 0, arguments.length - 1).concat(arguments[arguments.length - 1])); };
+		}
 		if (mi.sm) {
-			var _m = method;
-			method = function() { return _m.apply(null, [this].concat(Array.prototype.slice.call(arguments))); };
+			var _m2 = method;
+			method = function() { return _m2.apply(null, [this].concat(Array.prototype.slice.call(arguments))); };
 		}
 	}
 	return ss.mkdel(target, method);
 };
 
 ss.invokeCI = function#? DEBUG ss$invokeCI##(ci, args) {
-	if (ci.sm)
-		return ci.typeDef[ci.js].apply(null, args);
+	if (ci.exp)
+		args = args.slice(0, args.length - 1).concat(args[args.length - 1]);
+
+	if (ci.def)
+		return ci.def.apply(null, args);
+	else if (ci.sm)
+		return ci.typeDef[ci.sname].apply(null, args);
 	else
-		return ss.applyConstructor(ci.js ? ci.typeDef[ci.js] : ci.typeDef, args);
-}
+		return ss.applyConstructor(ci.sname ? ci.typeDef[ci.sname] : ci.typeDef, args);
+};
 
 ss.fieldAccess = function#? DEBUG ss$fieldAccess##(fi, obj) {
 	if (fi.isStatic && !!obj)
@@ -455,7 +469,7 @@ ss.fieldAccess = function#? DEBUG ss$fieldAccess##(fi, obj) {
 		throw 'Must specify target for instance field';
 	obj = fi.isStatic ? fi.typeDef : obj;
 	if (arguments.length === 3)
-		obj[fi.js] = arguments[2];
+		obj[fi.sname] = arguments[2];
 	else
-		return obj[fi.js];
-}
+		return obj[fi.sname];
+};

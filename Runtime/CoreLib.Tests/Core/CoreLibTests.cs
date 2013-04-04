@@ -23,6 +23,9 @@ namespace CoreLib.Tests.Core {
 	public class AttributeTests : CoreLibTestBase {}
 
 	[TestFixture]
+	public class TimeSpanTests : CoreLibTestBase {}
+
+	[TestFixture]
 	public class BooleanTests : CoreLibTestBase {}
 
 	[TestFixture]
@@ -92,6 +95,9 @@ namespace CoreLib.Tests.Core {
 	public class MathTests : CoreLibTestBase {}
 
 	[TestFixture]
+	public class RandomTests : CoreLibTestBase {}
+
+	[TestFixture]
 	public class MultidimArrayTests : CoreLibTestBase {}
 
 	[TestFixture]
@@ -158,6 +164,16 @@ namespace CoreLib.Tests.Core {
 	[TestFixture]
 	public class QueueTests : CoreLibTestBase {}
 
+	// System.Collections.ObjectModel
+
+	[TestFixture]
+	public class ReadOnlyCollectionTests : CoreLibTestBase {}
+
+	// System.Linq.Expressions
+
+	[TestFixture]
+	public class ExpressionTests : CoreLibTestBase {}
+
 	// System.Serialization
 
 	[TestFixture]
@@ -180,4 +196,9 @@ namespace CoreLib.Tests.Core {
 
 	[TestFixture]
 	public class StringBuilderTests : CoreLibTestBase {}
+
+	// System.Web
+
+	[TestFixture]
+	public class HttpUtilityTests : CoreLibTestBase {}
 }

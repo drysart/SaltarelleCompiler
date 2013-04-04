@@ -97,7 +97,7 @@ namespace CoreLib.TestScript {
 
 		public class C12 {
 			[Reflectable] public int F1;
-			[Reflectable] public DateTime F2;
+			[Reflectable, ScriptName("renamedF2")] public DateTime F2;
 			[Reflectable] public static string F3;
 		}
 
@@ -149,6 +149,86 @@ namespace CoreLib.TestScript {
 			[A1(7), A3] public event Action E { [A1(8), A3] add {} [A1(9), A3] remove {} }
 		}
 
+		[Serializable]
+		public class C19 {
+			[PreserveCase] public int A;
+			[PreserveCase] public string B;
+
+			[Reflectable, ObjectLiteral] public C19(int a, string b) {
+			}
+		}
+
+		[Serializable]
+		public class C20 {
+			[PreserveCase] public int A;
+			[PreserveCase] public string B;
+
+			[Reflectable, InlineCode("{{ A: {a}, B: {b} }}")]
+			public C20(int a, string b) {
+			}
+		}
+
+		public class C21 {
+			[PreserveCase] public int X;
+			public C21(int x) {
+				X = x;
+			}
+
+			[Reflectable, InlineCode("{this}.X + {a} + {b}")]
+			public int M1(int a, int b) { return 0; }
+
+			[Reflectable, InlineCode("{a} + {b}")]
+			public static int M2(int a, int b) { return 0; }
+
+			[Reflectable, InlineCode("{this}.X + {$System.Script}.getTypeFullName({T}) + {s}")]
+			public string M3<T>(string s) { return null; }
+		}
+
+		public class C22 {
+			public object a;
+			public object b;
+
+			[Reflectable] public C22(int a, params int[] b) {
+				this.a = a;
+				this.b = b;
+			}
+			[Reflectable, ExpandParams] public C22(string a, params string[] b) {
+				this.a = a;
+				this.b = b;
+			}
+
+			[Reflectable] public object[] M1(int a, params int[] b) {
+				return new object[] { a, b };
+			}
+
+			[Reflectable, ExpandParams] public object[] M2(int a, params int[] b) {
+				return new object[] { a, b };
+			}
+		}
+
+		[Serializable]
+		public class C23 {
+			public object a;
+			public object b;
+
+			[Reflectable] public C23(int a, params int[] b) {
+				this.a = a;
+				this.b = b;
+			}
+			[Reflectable, ExpandParams] public C23(string a, params string[] b) {
+				this.a = a;
+				this.b = b;
+			}
+
+			[Reflectable] public object[] M1(int a, params int[] b) {
+				return new object[] { a, b };
+			}
+
+			[Reflectable, ExpandParams] public object[] M2(int a, params int[] b) {
+				return new object[] { a, b };
+			}
+		}
+
 		[Test]
 		public void GetMembersReturnsMethodsWithAnyScriptableAttributeOrReflectableAttribute() {
 			var methods = typeof(C1).GetMembers();
@@ -159,63 +239,136 @@ namespace CoreLib.TestScript {
 
 		[Test]
 		public void IsStaticFlagWorksForMethod() {
-			Assert.AreStrictEqual(((MethodInfo)typeof(C2).GetMembers(BindingFlags.Instance)[0]).IsStatic, false, "Instance member should not be static");
-			Assert.AreStrictEqual(((MethodInfo)typeof(C2).GetMembers(BindingFlags.Static)[0]).IsStatic, true, "Static member should be static");
+			Assert.AreStrictEqual(typeof(C2).GetMembers(BindingFlags.Instance)[0].IsStatic, false, "Instance member should not be static");
+			Assert.AreStrictEqual(typeof(C2).GetMembers(BindingFlags.Static)[0].IsStatic, true, "Static member should be static");
 		}
 
 		[Test]
 		public void MemberTypeIsMethodForMethod() {
 			Assert.AreStrictEqual(typeof(C3).GetMethod("M1").MemberType, MemberTypes.Method);
+			Assert.AreStrictEqual(typeof(C21).GetMethod("M1").MemberType, MemberTypes.Method);
 		}
 
 		[Test]
 		public void IsConstructorIsFalseForMethod() {
 			Assert.AreStrictEqual(typeof(C3).GetMethod("M1").IsConstructor, false);
+			Assert.AreStrictEqual(typeof(C21).GetMethod("M1").IsConstructor, false);
 		}
 
 		[Test]
 		public void IsConstructorIsTrueForAllKindsOfConstructors() {
 			var c10 = typeof(C10).GetMembers();
 			var c11 = typeof(C11).GetMembers();
+			var c19 = typeof(C19).GetMembers();
+			var c20 = typeof(C20).GetMembers();
 			Assert.IsTrue(((ConstructorInfo)c10[0]).IsConstructor, "Unnamed");
 			Assert.IsTrue(((ConstructorInfo)c10[1]).IsConstructor, "Named");
 			Assert.IsTrue(((ConstructorInfo)c11[0]).IsConstructor, "Static method");
+			Assert.IsTrue(((ConstructorInfo)c19[0]).IsConstructor, "Object literal");
+			Assert.IsTrue(((ConstructorInfo)c20[0]).IsConstructor, "Inline code");
 		}
 
 		[Test]
 		public void IsStaticIsFalseForAllKindsOfConstructors() {
 			var c10 = typeof(C10).GetMembers();
 			var c11 = typeof(C11).GetMembers();
-			Assert.IsTrue(((ConstructorInfo)c10[0]).IsConstructor, "Unnamed");
-			Assert.IsTrue(((ConstructorInfo)c10[1]).IsConstructor, "Named");
-			Assert.IsTrue(((ConstructorInfo)c11[0]).IsConstructor, "Static method");
+			var c19 = typeof(C19).GetMembers();
+			var c20 = typeof(C20).GetMembers();
+			Assert.IsFalse(c10[0].IsStatic, "Unnamed");
+			Assert.IsFalse(c10[1].IsStatic, "Named");
+			Assert.IsFalse(c11[0].IsStatic, "Static method");
+			Assert.IsFalse(c19[0].IsStatic, "Object literal");
+			Assert.IsFalse(c20[0].IsStatic, "Inline code");
 		}
 
 		[Test]
 		public void MemberTypeIsConstructorForAllKindsOfConstructors() {
 			var c10 = typeof(C10).GetMembers();
 			var c11 = typeof(C11).GetMembers();
+			var c19 = typeof(C19).GetMembers();
+			var c20 = typeof(C20).GetMembers();
 			Assert.AreEqual(c10[0].MemberType, MemberTypes.Constructor, "Unnamed");
 			Assert.AreEqual(c10[1].MemberType, MemberTypes.Constructor, "Named");
 			Assert.AreEqual(c11[0].MemberType, MemberTypes.Constructor, "Static method");
+			Assert.AreEqual(c19[0].MemberType, MemberTypes.Constructor, "Object literal");
+			Assert.AreEqual(c20[0].MemberType, MemberTypes.Constructor, "Inline code");
 		}
 
 		[Test]
 		public void NameIsCtorForAllKindsOfConstructors() {
 			var c10 = typeof(C10).GetMembers();
 			var c11 = typeof(C11).GetMembers();
+			var c19 = typeof(C19).GetMembers();
+			var c20 = typeof(C20).GetMembers();
 			Assert.AreEqual(c10[0].Name, ".ctor", "Unnamed");
 			Assert.AreEqual(c10[1].Name, ".ctor", "Named");
 			Assert.AreEqual(c11[0].Name, ".ctor", "Static method");
+			Assert.AreEqual(c19[0].Name, ".ctor", "Object literal");
+			Assert.AreEqual(c20[0].Name, ".ctor", "Inline code");
 		}
 
 		[Test]
 		public void DeclaringTypeIsCorrectForAllKindsOfConstructors() {
 			var c10 = typeof(C10).GetMembers();
 			var c11 = typeof(C11).GetMembers();
+			var c19 = typeof(C19).GetMembers();
+			var c20 = typeof(C20).GetMembers();
 			Assert.AreEqual(c10[0].DeclaringType, typeof(C10), "Unnamed");
 			Assert.AreEqual(c10[1].DeclaringType, typeof(C10), "Named");
 			Assert.AreEqual(c11[0].DeclaringType, typeof(C11), "Static method");
+			Assert.AreEqual(c19[0].DeclaringType, typeof(C19), "Object literal");
+			Assert.AreEqual(c20[0].DeclaringType, typeof(C20), "Inline code");
+		}
+
+		[Test]
+		public void ScriptNameIsCorrectForAllKindsOfConstructors() {
+			var c10 = typeof(C10).GetMembers();
+			var c11 = typeof(C11).GetMembers();
+			var c19 = typeof(C19).GetMembers();
+			var c20 = typeof(C20).GetMembers();
+			Assert.IsTrue  (((ConstructorInfo)c10[0]).ScriptName == null, "Unnamed");
+			Assert.AreEqual(((ConstructorInfo)c10[1]).ScriptName, "ctor1", "Named");
+			Assert.AreEqual(((ConstructorInfo)c11[0]).ScriptName, "$ctor", "Static method");
+			Assert.IsTrue  (((ConstructorInfo)c19[0]).ScriptName == null, "Object literal");
+			Assert.IsTrue  (((ConstructorInfo)c20[0]).ScriptName == null, "Inline code");
+		}
+
+		[Test]
+		public void IsStaticMethodIsTrueOnlyForStaticMethodConstructors() {
+			var c10 = typeof(C10).GetMembers();
+			var c11 = typeof(C11).GetMembers();
+			var c19 = typeof(C19).GetMembers();
+			var c20 = typeof(C20).GetMembers();
+			Assert.IsFalse(((ConstructorInfo)c10[0]).IsStaticMethod, "Unnamed");
+			Assert.IsFalse(((ConstructorInfo)c10[1]).IsStaticMethod, "Named");
+			Assert.IsTrue (((ConstructorInfo)c11[0]).IsStaticMethod, "Static method");
+			Assert.IsFalse(((ConstructorInfo)c19[0]).IsStaticMethod, "Object literal");
+			Assert.IsFalse(((ConstructorInfo)c20[0]).IsStaticMethod, "Inline code");
+		}
+
+		[Test]
+		public void IsExpandParamsIsCorrectForConstructors() {
+			var c1 = typeof(C22).GetConstructor(new[] { typeof(int), typeof(int[]) });
+			var c2 = typeof(C22).GetConstructor(new[] { typeof(string), typeof(string[]) });
+			var c3 = typeof(C23).GetConstructor(new[] { typeof(int), typeof(int[]) });
+			var c4 = typeof(C23).GetConstructor(new[] { typeof(string), typeof(string[]) });
+			Assert.IsFalse(c1.IsExpandParams);
+			Assert.IsTrue (c2.IsExpandParams);
+			Assert.IsFalse(c3.IsExpandParams);
+			Assert.IsTrue (c4.IsExpandParams);
+		}
+
+		[Test]
+		public void SpecialImplementationExistsOnlyForObjectLiteralAndInlineCodeConstructors() {
+			var c10 = typeof(C10).GetMembers();
+			var c11 = typeof(C11).GetMembers();
+			var c19 = typeof(C19).GetMembers();
+			var c20 = typeof(C20).GetMembers();
+			Assert.IsTrue(((ConstructorInfo)c10[0]).SpecialImplementation == null, "Unnamed");
+			Assert.IsTrue(((ConstructorInfo)c10[1]).SpecialImplementation == null, "Named");
+			Assert.IsTrue(((ConstructorInfo)c11[0]).SpecialImplementation == null, "Static method");
+			Assert.IsTrue(((ConstructorInfo)c19[0]).SpecialImplementation != null, "Object literal");
+			Assert.IsTrue(((ConstructorInfo)c20[0]).SpecialImplementation != null, "Inline code");
 		}
 
 		[Test]
@@ -240,15 +393,24 @@ namespace CoreLib.TestScript {
 			var m4 = typeof(C7).GetMethod("M1");
 			Assert.IsFalse(m4.IsStatic, "M4 should not be static");
 			Assert.AreEqual(m4.ParameterTypes, new[] { typeof(int) }, "C7.M1 parameters should be correct");
+
+			var m5 = typeof(C21).GetMethod("M1");
+			Assert.AreEqual(m5.ReturnType, typeof(int), "M5 Return type should be int");
+			Assert.IsFalse(m5.IsStatic, "M5 should not be static");
+			Assert.AreEqual(m5.ParameterTypes, new[] { typeof(int), typeof(int) }, "M5 parameters should be correct");
 		}
 
 		[Test]
 		public void ParameterTypesShouldBeCorrectForConstructors() {
 			var c10 = typeof(C10).GetMembers();
 			var c11 = typeof(C11).GetMembers();
+			var c19 = typeof(C19).GetMembers();
+			var c20 = typeof(C20).GetMembers();
 			Assert.AreEqual(((ConstructorInfo)c10[0]).ParameterTypes, new[] { typeof(int) }, "Unnamed");
 			Assert.AreEqual(((ConstructorInfo)c10[1]).ParameterTypes, new[] { typeof(int), typeof(string) }, "Named");
 			Assert.AreEqual(((ConstructorInfo)c11[0]).ParameterTypes, new[] { typeof(DateTime) }, "Static method");
+			Assert.AreEqual(((ConstructorInfo)c19[0]).ParameterTypes, new[] { typeof(int), typeof(string) }, "Object literal");
+			Assert.AreEqual(((ConstructorInfo)c20[0]).ParameterTypes, new[] { typeof(int), typeof(string) }, "Object literal");
 		}
 
 		[Test]
@@ -257,7 +419,7 @@ namespace CoreLib.TestScript {
 		}
 
 		[Test]
-		public void MethodNameIsTheCSharp() {
+		public void MethodNameIsTheCSharpName() {
 			var members = (MethodInfo[])typeof(C4).GetMembers();
 			Assert.AreEqual(members.Filter(m => m.Name == "M").Length, 3, "All methods should have name M");
 		}
@@ -298,6 +460,38 @@ namespace CoreLib.TestScript {
 		}
 
 		[Test]
+		public void ScriptNameWorksForAllKindsOfMethods() {
+			Assert.AreEqual(typeof(C4).GetMethod("M", new[] { typeof(int) }).ScriptName, "m$1", "C4.M");
+			Assert.IsTrue  (typeof(C21).GetMethod("M1").ScriptName == null, "C21.M1");
+			Assert.AreEqual(typeof(C7).GetMethod("M1").ScriptName, "m1", "C7.m1");
+		}
+
+		[Test]
+		public void IsStaticMethodWithThisAsFirstArgumentIsTrueOnlyForMethodsOnSerializableTypes() {
+			Assert.IsFalse(typeof(C21).GetMethod("M3").IsStaticMethodWithThisAsFirstArgument, "C21.M3");
+			Assert.IsTrue (typeof(C7 ).GetMethod("M1").IsStaticMethodWithThisAsFirstArgument, "C7.m1");
+		}
+
+		[Test]
+		public void SpecialImplementationExistsOnlyForMethodsImplementedAsInlineCode() {
+			Assert.IsTrue(typeof(C4).GetMethod("M", new[] { typeof(int) }).SpecialImplementation == null, "C4.M");
+			Assert.IsTrue(typeof(C21).GetMethod("M3").SpecialImplementation != null, "C21.M3");
+			Assert.IsTrue(typeof(C7).GetMethod("M1").SpecialImplementation == null, "C7.m1");
+		}
+
+		[Test]
+		public void IsExpandParamsIsCorrectForMethods() {
+			var m1 = typeof(C22).GetMethod("M1");
+			var m2 = typeof(C22).GetMethod("M2");
+			var m3 = typeof(C23).GetMethod("M1");
+			var m4 = typeof(C23).GetMethod("M2");
+			Assert.IsFalse(m1.IsExpandParams);
+			Assert.IsTrue (m2.IsExpandParams);
+			Assert.IsFalse(m3.IsExpandParams);
+			Assert.IsTrue (m4.IsExpandParams);
+		}
+
+		[Test]
 		public void CreateDelegateWorksForNonGenericInstanceMethods() {
 			var m = typeof(C8).GetMethod("M1");
 			var c = new C8("X");
@@ -312,6 +506,13 @@ namespace CoreLib.TestScript {
 			Assert.Throws(() => m.CreateDelegate(c, new[] { typeof(string) }), "With type arguments with target should throw");
 			Assert.Throws(() => m.CreateDelegate(new[] { typeof(string) }), "With type arguments without target should throw");
 			Assert.Throws(() => m.CreateDelegate((object)null, new[] { typeof(string) }), "With type arguments with null target should throw");
+		}
+
+		[Test]
+		public void DelegateCreateDelegateWorksForNonGenericInstanceMethods() {
+			var m = typeof(C8).GetMethod("M1");
+			var f1 = (Func<string, string, string>)Delegate.CreateDelegate(typeof(Func<string, string, string>), new C8("X"), m);
+			Assert.AreEqual(f1("a", "b"), "X a b", "Delegate should be correct");
 		}
 
 		[Test]
@@ -390,6 +591,18 @@ namespace CoreLib.TestScript {
 		}
 
 		[Test]
+		public void InvokeWorksForNonGenericInlineCodeMethods() {
+			Assert.AreEqual(typeof(C21).GetMethod("M1").Invoke(new C21(14), 15, 16), 45, "Instance invoke should work");
+			Assert.AreEqual(typeof(C21).GetMethod("M2").Invoke(null, 15, 16), 31, "Static invoke should work");
+		}
+
+		[Test]
+		public void InvokeWorksForGenericInlineCodeMethods() {
+			var m = typeof(C21).GetMethod("M3");
+			Assert.AreEqual(m.Invoke(new C21(42), new[] { typeof(string) }, "World"), "42StringWorld", "Invoke should work");
+		}
+
+		[Test]
 		public void InvokeWorksForGenericInstanceMethod() {
 			var m = typeof(C8).GetMethod("M3");
 			var c = new C8("X");
@@ -419,6 +632,17 @@ namespace CoreLib.TestScript {
 		}
 
 		[Test]
+		public void InvokeWorksForExpandParamsMethods() {
+			var m1 = typeof(C22).GetMethod("M2");
+			var r1 = (object[])m1.Invoke(new C22(0, null), new object[] { 2, new[] { 17, 31 } });
+			Assert.AreEqual(r1, new object[] { 2, new[] { 17, 31 } });
+
+			var m2 = typeof(C23).GetMethod("M2");
+			var r2 = (object[])m2.Invoke(new C23(0, null), new object[] { 2, new[] { 17, 32 } });
+			Assert.AreEqual(r2, new object[] { 2, new[] { 17, 32 } });
+		}
+
+		[Test]
 		public void InvokeWorksForAllKindsOfConstructors() {
 			var c1 = (ConstructorInfo)typeof(C10).GetMembers().Filter(m => ((ConstructorInfo)m).ParameterTypes.Length == 1)[0];
 			var o1 = (C10)c1.Invoke(42);
@@ -433,6 +657,27 @@ namespace CoreLib.TestScript {
 			var c3 = (ConstructorInfo)typeof(C11).GetMembers()[0];
 			var o3 = (C11)c3.Invoke(new DateTime(2012, 1, 2));
 			Assert.AreEqual(o3.D, new DateTime(2012, 1, 2), "o3.D");
+
+			var c19 = (ConstructorInfo)typeof(C19).GetMembers()[0];
+			var o4 = (C19)c19.Invoke(42, "Hello");
+			Assert.AreEqual(o4, new { A = 42, B = "Hello" });
+
+			var c20 = (ConstructorInfo)typeof(C20).GetMembers()[0];
+			var o5 = c20.Invoke(42, "Hello");
+			Assert.AreEqual(o5, new { A = 42, B = "Hello" });
+		}
+
+		[Test]
+		public void InvokeWorksForExpandParamsConstructors() {
+			var c1 = typeof(C22).GetConstructor(new[] { typeof(string), typeof(string[]) });
+			var o1 = (C22)c1.Invoke(new object[] { "a", new[] { "b", "c" } });
+			Assert.AreEqual(o1.a, "a", "o1.a");
+			Assert.AreEqual(o1.b, new[] { "b", "c" }, "o1.b");
+
+			var c2 = typeof(C23).GetConstructor(new[] { typeof(string), typeof(string[]) });
+			var o2 = (C23)c2.Invoke(new object[] { "a", new[] { "b", "c" } });
+			Assert.AreEqual(o2.a, "a", "o1.a");
+			Assert.AreEqual(o2.b, new[] { "b", "c" }, "o1.b");
 		}
 
 		[Test]
@@ -465,6 +710,12 @@ namespace CoreLib.TestScript {
 			Assert.AreStrictEqual(typeof(C12).GetField("F1").FieldType, typeof(int), "Instance 1");
 			Assert.AreStrictEqual(typeof(C12).GetField("F2").FieldType, typeof(DateTime), "Instance 2");
 			Assert.AreStrictEqual(typeof(C12).GetField("F3").FieldType, typeof(string), "Static");
+		}
+
+		[Test]
+		public void ScriptNameIsCorrectForField() {
+			Assert.AreEqual(typeof(C12).GetField("F1").ScriptName, "f1", "f1");
+			Assert.AreEqual(typeof(C12).GetField("F2").ScriptName, "renamedF2", "f2");
 		}
 
 		[Test]
@@ -644,6 +895,12 @@ namespace CoreLib.TestScript {
 			Assert.AreStrictEqual(typeof(C14).GetProperty("P2").MemberType, MemberTypes.Property, "P2");
 			Assert.AreStrictEqual(typeof(C14).GetProperty("P3").MemberType, MemberTypes.Property, "P3");
 			Assert.AreStrictEqual(typeof(C14).GetProperty("P4").MemberType, MemberTypes.Property, "P4");
+		}
+
+		[Test]
+		public void ScriptFieldNameIsCorrectForPropertiesImplementedAsFieldAndNullForOtherProperties() {
+			Assert.IsTrue  (typeof(C14).GetProperty("P1").ScriptFieldName == null, "P1");
+			Assert.AreEqual(typeof(C14).GetProperty("P2").ScriptFieldName, "p2", "P2");
 		}
 
 		[Test]

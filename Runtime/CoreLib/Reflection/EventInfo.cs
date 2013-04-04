@@ -2,7 +2,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
 namespace System.Reflection {
-	[Imported]
+	[Imported(TypeCheckCode = "{this}.type === 2")]
 	[Serializable]
 	public class EventInfo : MemberInfo {
 		[ScriptName("adder")]
@@ -15,5 +15,7 @@ namespace System.Reflection {
 
 		[InlineCode("{$System.Script}.midel({this}.remover, {target})({handler})")]
 		public void RemoveEventHandler(object target, Delegate handler) {}
+
+		internal EventInfo() {}
 	}
 }
